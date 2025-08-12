@@ -1,0 +1,187 @@
+---
+title: "UTSSRP Research Project Implementation"
+author: "Charles-Étienne Lessard"
+date: "2025-08-07"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## 
+
+This notebook shows step-by-step how to implement the Maximum Likelihood Estimator on given data points. The goal of our project was to compare the rate of convergence of this estimator with another one called the Wasserstein density estimator, which is implemented in Python. At the end we also compare the rate of convergence of both estimator on a large data sample.
+
+Let's first load the necessary libraries for the project.
+
+```{r}
+library(ggplot2)
+library(fdrtool)
+library(patchwork)
+rm(list = ls())
+
+```
+
+For this project we focused on the exponential distribution family. Let's first visualize the quantile function of the exponential distribution with rate 1.
+
+```{r}
+u_grid <- seq(0, 1, by = 0.001)
+u_grid <- u_grid[1:(length(u_grid) - 1)]
+Q_true <- qexp(u_grid)
+plot(u_grid,Q_true,
+     main = "Quantile Function of Exponential Distribution with Rate 1")
+
+
+```
+
+The following function takes as input a data sample and computes the maximum likelihood estimator (MLE) of this sample.
+
+```{r}
+Quantile_grenander <- function(u_grid,data) {
+  e <- ecdf(data)
+  g <- grenander(e)
+  g_cdf <- g$F
+  y <- environment(g_cdf)$x
+  Q <- quantile(y, u_grid, type = 1)
+  return(Q)
+  
+}
+```
+
+Here is an example of what the quantile function of the MLE looks like for data points generated from the exponential distribution with rate 1.
+
+```{r}
+data <- rexp(100,1)
+Q_MLE <- Quantile_grenander(u_grid,data)
+plot(u_grid,Q_MLE,
+     main = "Quantile Function of MLE Estimator with 100 Data Points")
+
+
+```
+
+We can now use the L2 distance to compute the difference between the 2 quantile functions. Another name for this distance is the Wasserstein distance.
+
+```{r}
+L2dist <- function(u_grid,Q_true,Q_gren){
+  n = length(u_grid)
+  return(sqrt(sum((Q_gren - Q_true)^2)/n))
+}
+L2dist(u_grid,Q_true,Q_MLE)
+```
+
+We want to know what happens to this distance as we increase the sample size. The following function compute the L2 distances for an arbitrary range of sample size.
+
+```{r}
+Convergence_Grenander <- function(u_grid,Q_true,data,start,end,step){
+  n_points <- ((end - start) %/% step) + 1
+  dists <- numeric(n_points)
+  
+  i <- 1
+  num_samples <- start
+  
+  while (num_samples <= end) {
+    samples <- data[1:num_samples]
+    Q_gren <- Quantile_grenander(u_grid, samples)
+    dists[i] <- L2dist(u_grid, Q_true, Q_gren)
+    i <- i + 1
+    num_samples <- num_samples + step
+  }
+  
+  return(dists)
+}
+```
+
+Let's see how the L2 distance varies as we increase the sample size, starting at 50000 and increasing to 900000 by increments of 10000.
+
+```{r}
+data = read.csv("exponential_data_sample_1e+06_rate_1.csv")
+data <- data[[1]]
+start = 49000
+end = 900000
+step = 10000
+dists = Convergence_Grenander(u_grid,Q_true,data,start,end,step)
+x = seq(start, end, by = step)
+#df <- data.frame(x = x, dists = dists)
+#write.csv(df, file = "Data_Grenander.csv", row.names = FALSE)
+plot(x,dists,
+     main = "Convergence of Maximum Likelihood Estimator",
+     xlab = "Number of Samples",
+     ylab = "L2 Distance",)
+```
+
+Let's adjust the axis to make them log-scaled:
+
+```{r}
+plot(log10(x),log10(dists),
+     main = "Convergence of Maximum Likelihood Estimator (Log-Log Plot)",
+     xlab = "log10(Number of Samples)",
+     ylab = "log10(L2 Distance)",)
+```
+
+We can clearly see that the L2 distance between the quantile function of the true distribution and the quantile function of the MLE estimator converges to zero. This was also the case with the Wasserstein estimator shown in the Jupyter Notebook, but which one converges faster?
+
+The following function computes and plots the rate of convergence in log-scale of the two estimators.
+
+```{r}
+#plot the two rate of convergence
+plot_data2 <- function(dfg, dfw, lambda) {
+  df_both <- rbind(dfg, dfw)
+  
+  # Fit linear models
+  model_g <- lm(y ~ x, data = subset(df_both, Type == "Grenander"))
+  model_w <- lm(y ~ x, data = subset(df_both, Type == "Wasserstein"))
+  
+  # Extract slopes (coefficients)
+  slope_g <- round(coef(model_g)[2], 3)
+  slope_w <- round(coef(model_w)[2], 3)
+  
+  #plot
+  p <- ggplot(df_both, aes(x = x, y = y, color = Type)) +
+    geom_point(size = 2) +
+    geom_smooth(method = "lm", se = FALSE) +
+    labs(
+      title = paste("Log-Log Plot of Rate of Convergence of Wasserstein and MLE Estimators for Exp(", lambda, ")", sep = ""),
+      x = "Log10 (Number of Samples)",
+      y = "Log10 (Wasserstein Distance)"
+    ) +
+    annotate("label", x = min(df_both$x), y = max(df_both$y), 
+             label = paste0("Slope (Grenander): ", slope_g), 
+             hjust = 0, vjust = 10, 
+             fill = "white", color = "black", size = 5, 
+             label.size = 0.5, label.r = unit(0.15, "lines")) +
+    annotate("label", x = min(df_both$x), y = max(df_both$y) - 0.3, 
+             label = paste0("Slope (Wasserstein): ", slope_w), 
+             hjust = 0, vjust = 2, 
+             fill = "white", color = "black", size = 5, 
+             label.size = 0.5, label.r = unit(0.15, "lines")) +
+    theme_minimal(base_size = 11)+
+    theme(legend.position = "none",
+          axis.title = element_text(size = 16),   # axis titles bigger
+          axis.text = element_text(size = 14),
+          plot.title = element_text(size = 20, face = "bold")# axis tick labels bigger
+    )
+  return(p)
+}
+```
+
+Let's examine the rate of convergence of each one for our 10\^6 data sample from the exponential distribution with rate 1:
+
+```{r}
+#data for grenander
+data_g <- read.csv("Data_Grenander.csv")
+dfg <- data.frame(x = data_g[["x"]], y = data_g[["dists"]], Type = "Grenander")
+dfg_log <- data.frame(x = log10(dfg$x), y = log10(dfg$y), Type = dfg$Type)
+
+#data for Wasserstein
+data_w <- read.csv("Data_Wasserstein.csv")
+dfw <- data.frame(x = data_w[["x"]], y = data_w[["dists"]], Type = "Wasserstein")
+dfw_log <- data.frame(x = log10(dfw$x), y = log10(dfw$y), Type = dfw$Type)
+
+plot_data2(dfg_log,dfw_log,1)
+
+```
+
+Asymptotically the Wasserstein estimator has a faster rate of convergence. However, up to a very large sample size, the MLE estimator is more accurate than the Wasserstein estimator.
+
+For this project, we had to focus on the exponential distribution family. However, we could also compare these estimators on other univariate and continuous distributions such as the normal or the gamma distribution.
