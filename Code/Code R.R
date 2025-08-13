@@ -5,7 +5,7 @@ rm(list = ls())
 
 u_grid <- seq(0, 1, by = 0.001)
 u_grid <- u_grid[1:(length(u_grid) - 1)]
-data = read.csv("exponential_data_sample_1e+06_rate_1.csv")
+data = read.csv("../Data/exponential_data_sample_1e+06_rate_1.csv")
 data <- data[[1]]
 Q_true <- qexp(u_grid)
 #plot(u_grid,Q_true)
@@ -59,7 +59,7 @@ generate_data <- function(n, lambda, seed){
 
 
 #simulation with given data points and fixed number of samples
-data = read.csv("exponential_data_sample_1e+06_rate_1.csv")
+data = read.csv("../Data/exponential_data_sample_1e+06_rate_1.csv")
 data <- data[[1]]
 start = 49000
 end = 900000

@@ -95,7 +95,7 @@ Convergence_Grenander <- function(u_grid,Q_true,data,start,end,step){
 Let's see how the L2 distance varies as we increase the sample size, starting at 50000 and increasing to 900000 by increments of 10000.
 
 ```{r}
-data = read.csv("exponential_data_sample_1e+06_rate_1.csv")
+data = read.csv("../Data/exponential_data_sample_1e+06_rate_1.csv")
 data <- data[[1]]
 start = 49000
 end = 900000
@@ -169,12 +169,12 @@ Let's examine the rate of convergence of each one for our 10\^6 data sample from
 
 ```{r}
 #data for grenander
-data_g <- read.csv("Data_Grenander.csv")
+data_g <- read.csv("../Data/Data_Grenander.csv")
 dfg <- data.frame(x = data_g[["x"]], y = data_g[["dists"]], Type = "Grenander")
 dfg_log <- data.frame(x = log10(dfg$x), y = log10(dfg$y), Type = dfg$Type)
 
 #data for Wasserstein
-data_w <- read.csv("Data_Wasserstein.csv")
+data_w <- read.csv("../Data/Data_Wasserstein.csv")
 dfw <- data.frame(x = data_w[["x"]], y = data_w[["dists"]], Type = "Wasserstein")
 dfw_log <- data.frame(x = log10(dfw$x), y = log10(dfw$y), Type = dfw$Type)
 

@@ -46,12 +46,12 @@ plot_data2 <- function(dfg, dfw, lambda) {
 
 
 #data for grenander
-data_g <- read.csv("Data_Grenander.csv")
+data_g <- read.csv("../Data/Data_Grenander.csv")
 dfg <- data.frame(x = data_g[["x"]], y = data_g[["dists"]], Type = "Grenander")
 dfg_log <- data.frame(x = log10(dfg$x), y = log10(dfg$y), Type = dfg$Type)
 
 #data for Wasserstein
-data_w <- read.csv("Data_Wasserstein.csv")
+data_w <- read.csv("../Data/Data_Wasserstein.csv")
 dfw <- data.frame(x = data_w[["x"]], y = data_w[["dists"]], Type = "Wasserstein")
 dfw_log <- data.frame(x = log10(dfw$x), y = log10(dfw$y), Type = dfw$Type)
 
